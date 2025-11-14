@@ -1,0 +1,103 @@
+import { NextResponse } from "next/server";
+import sharp from "sharp";
+import { readFile } from "fs/promises";
+import path from "path";
+
+export const runtime = "nodejs";
+
+function wrapText(text: string, maxChars: number): string[] {
+  const words = text.split(/\s+/);
+  const lines: string[] = [];
+  let line = "";
+  for (const w of words) {
+    const tryLine = line ? line + " " + w : w;
+    if (tryLine.length > maxChars) {
+      if (line) lines.push(line);
+      line = w;
+    } else {
+      line = tryLine;
+    }
+  }
+  if (line) lines.push(line);
+  return lines;
+}
+
+function buildBottomTextSVG(title: string, width: number, height: number, padding: number): Buffer {
+  const contentWidth = width - padding * 2;
+  const contentHeight = height - padding * 2;
+  let fontSize = Math.round(Math.min(contentHeight * 0.25, 56));
+  const maxChars = Math.max(16, Math.round(contentWidth / (fontSize * 0.55)));
+  let lines = wrapText(title, maxChars);
+  lines = lines.slice(0, 6);
+  const lineHeight = Math.round(fontSize * 1.25);
+  const totalTextHeight = lineHeight * lines.length;
+  if (totalTextHeight > contentHeight) {
+    fontSize = Math.max(24, Math.round(fontSize * (contentHeight / totalTextHeight)));
+  }
+  const lh = Math.round(fontSize * 1.25);
+  const txtHeight = lh * lines.length;
+  const startY = padding + Math.round((contentHeight - txtHeight) / 2) + fontSize;
+  const tspans = lines
+    .map((line, i) => `<tspan x="${Math.round(width / 2)}" y="${startY + i * lh}">${line}</tspan>`)
+    .join("");
+  const svg = `
+    <svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg">
+      <text fill="#0b9ef9" font-size="${fontSize}" font-weight="700" text-anchor="middle" font-family="Arial, Helvetica, Verdana, sans-serif">${tspans}</text>
+    </svg>
+  `;
+  return Buffer.from(svg);
+}
+
+export async function GET(req: Request) {
+  const u = new URL(req.url);
+  const title = u.searchParams.get("title") || "";
+  const imageUrl = u.searchParams.get("imageUrl");
+  const format = (u.searchParams.get("format") || "post").toLowerCase();
+  const transparent = u.searchParams.get("transparent") === "true";
+  const dpiParam = u.searchParams.get("dpi");
+  const dpi = dpiParam ? Math.max(72, Math.min(300, parseInt(dpiParam))) : 72;
+  if (!imageUrl) {
+    return NextResponse.json({ error: "Parâmetro imageUrl é obrigatório" }, { status: 400 });
+  }
+  let size = { width: 1080, height: 1350 };
+  if (format === "square") size = { width: 1080, height: 1080 };
+  else if (format === "post" || format === "portrait") size = { width: 1080, height: 1350 };
+  else if (format === "widescreen") size = { width: 1920, height: 1080 };
+  else if (format === "story") size = { width: 1080, height: 1920 };
+  try {
+    const res = await fetch(imageUrl);
+    if (!res.ok) return NextResponse.json({ error: "Falha ao baixar imagem" }, { status: res.status });
+    const buf = Buffer.from(await res.arrayBuffer());
+    const canvas = sharp({
+      create: {
+        width: size.width,
+        height: size.height,
+        channels: 4,
+        background: transparent ? { r: 0, g: 0, b: 0, alpha: 0 } : { r: 255, g: 255, b: 255, alpha: 1 },
+      },
+    }).png();
+    const bg = await sharp(buf).resize(size.width, size.height, { fit: "cover" }).toBuffer();
+
+    const overlayName = format === "story" ? "2.png" : "1.png";
+    const overlayPath = path.join(process.cwd(), "public", overlayName);
+    const overlay = await readFile(overlayPath);
+
+    const bottomHeight = Math.round(size.height * 0.3);
+    const pad = Math.round(size.width * 0.05);
+    const bottomTextSvg = buildBottomTextSVG(title, size.width, bottomHeight, pad);
+
+    const composites = [
+      { input: bg, left: 0, top: 0 },
+      { input: overlay, left: 0, top: 0 },
+      { input: bottomTextSvg, left: 0, top: size.height - bottomHeight },
+    ];
+    const out = await canvas
+      .composite(composites)
+      .withMetadata({ density: dpi })
+      .png()
+      .toBuffer();
+    return new NextResponse(out, { headers: { "Content-Type": "image/png" } });
+  } catch {
+    return NextResponse.json({ error: "Erro ao gerar imagem" }, { status: 500 });
+  }
+}
