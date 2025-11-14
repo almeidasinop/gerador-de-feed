@@ -10,13 +10,13 @@
   "categories": ["news", "photo", "tools"],
   "icons": [
     {
-      "src": "/api/icon?size=192",
+      "src": "/favicon_io/android-chrome-192x192.png",
       "type": "image/png",
       "sizes": "192x192",
       "purpose": "any"
     },
     {
-      "src": "/api/icon?size=512",
+      "src": "/favicon_io/android-chrome-512x512.png",
       "type": "image/png",
       "sizes": "512x512",
       "purpose": "any maskable"
