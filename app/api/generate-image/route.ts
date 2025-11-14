@@ -37,7 +37,7 @@ function escapeXml(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
-function buildBottomTextSVG(title: string, width: number, height: number, padding: number): Buffer {
+function buildBottomTextSVG(title: string, width: number, height: number, padding: number, fontFaceCss?: string): Buffer {
   const contentWidth = width - padding * 2;
   const contentHeight = height - padding * 2;
   let fontSize = Math.round(Math.min(contentHeight * 0.25, 56));
@@ -57,10 +57,29 @@ function buildBottomTextSVG(title: string, width: number, height: number, paddin
     .join("");
   const svg = `<?xml version="1.0" encoding="UTF-8"?>
     <svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg" xml:space="preserve">
+      ${fontFaceCss || ""}
       <text fill="#0b9ef9" font-size="${fontSize}" font-weight="700" text-anchor="middle" font-family="Segoe UI, Roboto, Arial, Helvetica, Verdana, system-ui, -apple-system, DejaVu Sans, Noto Sans, Liberation Sans, sans-serif">${tspans}</text>
     </svg>
   `;
   return Buffer.from(svg);
+}
+
+async function getEmbeddedFontCss(sampleText: string): Promise<string | undefined> {
+  try {
+    const t = encodeURIComponent(sampleText.slice(0, 200));
+    const cssRes = await fetch(`https://fonts.googleapis.com/css2?family=Noto+Sans:wght@700&display=swap&text=${t}`);
+    if (!cssRes.ok) return undefined;
+    const css = await cssRes.text();
+    const m = css.match(/url\((https:[^\)]+\.woff2)\)/);
+    if (!m) return undefined;
+    const fontRes = await fetch(m[1]);
+    if (!fontRes.ok) return undefined;
+    const buf = Buffer.from(await fontRes.arrayBuffer());
+    const b64 = buf.toString("base64");
+    return `<style>@font-face{font-family:'EmbedFont';font-style:normal;font-weight:700;src:url(data:font/woff2;base64,${b64}) format('woff2');}</style>`;
+  } catch {
+    return undefined;
+  }
 }
 
 export async function GET(req: Request) {
@@ -118,7 +137,8 @@ export async function GET(req: Request) {
 
     const bottomHeight = Math.round(size.height * 0.3);
     const pad = Math.round(size.width * 0.05);
-    const bottomTextSvg = buildBottomTextSVG(title, size.width, bottomHeight, pad);
+    const fontFaceCss = await getEmbeddedFontCss(title);
+    const bottomTextSvg = buildBottomTextSVG(title, size.width, bottomHeight, pad, fontFaceCss);
 
     const composites: { input: Buffer; left: number; top: number }[] = [
       { input: bg, left: 0, top: 0 },
