@@ -1,5 +1,14 @@
-const CACHE_NAME = 'gerador-cache-v1';
+const CACHE_NAME = 'gerador-cache-v2';
 const PRECACHE_URLS = ['/', '/manifest.webmanifest'];
+
+function isHttpUrl(request) {
+  try {
+    const url = new URL(request.url);
+    return url.protocol === 'http:' || url.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -41,6 +50,7 @@ function networkFirst(request) {
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   if (request.method !== 'GET') return;
+  if (!isHttpUrl(request)) return;
   const url = new URL(request.url);
 
   if (url.pathname.startsWith('/_next/static') || url.pathname.startsWith('/_next/image')) {
@@ -55,4 +65,3 @@ self.addEventListener('fetch', (event) => {
 
   event.respondWith(cacheFirst(request));
 });
-

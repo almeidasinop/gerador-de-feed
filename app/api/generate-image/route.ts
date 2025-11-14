@@ -28,7 +28,9 @@ function normalizeText(text: string): string {
     .replace(/[“”]/g, '"')
     .replace(/[‘’]/g, "'")
     .replace(/\u00A0/g, " ")
-    .replace(/\u200B/g, "");
+    .replace(/\u200B/g, "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
 }
 
 function escapeXml(s: string): string {
@@ -53,8 +55,8 @@ function buildBottomTextSVG(title: string, width: number, height: number, paddin
   const tspans = lines
     .map((line, i) => `<tspan x="${Math.round(width / 2)}" y="${startY + i * lh}">${escapeXml(line)}</tspan>`)
     .join("");
-  const svg = `
-    <svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg">
+  const svg = `<?xml version="1.0" encoding="UTF-8"?>
+    <svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg" xml:space="preserve">
       <text fill="#0b9ef9" font-size="${fontSize}" font-weight="700" text-anchor="middle" font-family="system-ui, -apple-system, Segoe UI, Roboto, Arial, Helvetica, Verdana, sans-serif">${tspans}</text>
     </svg>
   `;
