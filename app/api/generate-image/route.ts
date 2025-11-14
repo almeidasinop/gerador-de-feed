@@ -22,12 +22,15 @@ function wrapText(text: string, maxChars: number): string[] {
 }
 
 function normalizeText(text: string): string {
-  return text
+  const base = text
     .normalize("NFKC")
     .replace(/[“”]/g, '"')
     .replace(/[‘’]/g, "'")
     .replace(/\u00A0/g, " ")
     .replace(/\u200B/g, "");
+  const strip = process.env.VERCEL === "1" || process.env.STRIP_DIACRITICS === "1";
+  if (!strip) return base;
+  return base.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 }
 
 function escapeXml(s: string): string {
@@ -54,7 +57,7 @@ function buildBottomTextSVG(title: string, width: number, height: number, paddin
     .join("");
   const svg = `<?xml version="1.0" encoding="UTF-8"?>
     <svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg" xml:space="preserve">
-      <text fill="#0b9ef9" font-size="${fontSize}" font-weight="700" text-anchor="middle" font-family="DejaVu Sans, Noto Sans, Liberation Sans, system-ui, -apple-system, Segoe UI, Roboto, Arial, Helvetica, Verdana, sans-serif">${tspans}</text>
+      <text fill="#0b9ef9" font-size="${fontSize}" font-weight="700" text-anchor="middle" font-family="Segoe UI, Roboto, Arial, Helvetica, Verdana, system-ui, -apple-system, DejaVu Sans, Noto Sans, Liberation Sans, sans-serif">${tspans}</text>
     </svg>
   `;
   return Buffer.from(svg);
@@ -100,7 +103,13 @@ export async function GET(req: Request) {
     const overlayName = format === "story" ? "2.png" : "1.png";
     let overlay: Buffer | undefined;
     try {
-      const overlayUrl = new URL(`/${overlayName}`, u.origin).toString();
+      const xfProto = req.headers.get("x-forwarded-proto");
+      const xfHost = req.headers.get("x-forwarded-host");
+      const host = req.headers.get("host");
+      const proto = xfProto || "https";
+      const h = xfHost || host;
+      const origin = h ? `${proto}://${h}` : u.origin;
+      const overlayUrl = new URL(`/${overlayName}`, origin).toString();
       const overlayRes = await fetch(overlayUrl, { redirect: "follow" });
       if (overlayRes.ok) {
         overlay = Buffer.from(await overlayRes.arrayBuffer());
