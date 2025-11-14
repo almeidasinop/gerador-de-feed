@@ -1,0 +1,6 @@
+{
+  "hosting": {
+    "source": ".",
+    "ignore": ["**/node_modules/**", "**/.git/**"]
+  }
+}

@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import sharp from "sharp";
-import { readFile } from "fs/promises";
-import path from "path";
+// no filesystem reads for overlays; fetch from public URL for hosting portability
 
 export const runtime = "nodejs";
 
@@ -92,8 +91,10 @@ export async function GET(req: Request) {
     const bg = await sharp(buf).resize(size.width, size.height, { fit: "cover" }).toBuffer();
 
     const overlayName = format === "story" ? "2.png" : "1.png";
-    const overlayPath = path.join(process.cwd(), "public", overlayName);
-    const overlay = await readFile(overlayPath);
+    const overlayUrl = new URL(`/${overlayName}`, u.origin).toString();
+    const overlayRes = await fetch(overlayUrl);
+    if (!overlayRes.ok) return NextResponse.json({ error: "Falha ao carregar máscara" }, { status: overlayRes.status });
+    const overlay = Buffer.from(await overlayRes.arrayBuffer());
 
     const bottomHeight = Math.round(size.height * 0.3);
     const pad = Math.round(size.width * 0.05);
