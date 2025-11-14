@@ -6,6 +6,7 @@ type FeedItem = {
     title: string;
     link: string;
     imageUrl: string | null;
+    date: string | null;
 };
 
 const parser = new Parser();
@@ -59,6 +60,7 @@ export async function GET(req: Request) {
             title: (item as Record<string, unknown>)["title"] as string || "",
             link: (item as Record<string, unknown>)["link"] as string || "",
             imageUrl: extractImage(item as unknown as Record<string, unknown>),
+            date: ((item as Record<string, unknown>)["isoDate"] as string | undefined) || ((item as Record<string, unknown>)["pubDate"] as string | undefined) || null,
         }));
         return NextResponse.json({ posts });
     } catch {
