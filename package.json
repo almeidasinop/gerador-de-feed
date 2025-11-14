@@ -2,6 +2,9 @@
   "name": "meu-gerador-de-posts",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": "20"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -13,7 +16,7 @@
     "react": "19.2.0",
     "react-dom": "19.2.0",
     "rss-parser": "^3.13.0",
-    "sharp": "^0.34.5"
+    "sharp": "^0.33.5"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
