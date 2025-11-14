@@ -77,7 +77,14 @@ export async function GET(req: Request) {
   else if (format === "widescreen") size = { width: 1920, height: 1080 };
   else if (format === "story") size = { width: 1080, height: 1920 };
   try {
-    const res = await fetch(imageUrl);
+    const res = await fetch(imageUrl, {
+      redirect: "follow",
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36",
+        Accept: "image/avif,image/webp,image/apng,image/*,*/*;q=0.8",
+        Referer: u.origin,
+      },
+    });
     if (!res.ok) return NextResponse.json({ error: "Falha ao baixar imagem" }, { status: res.status });
     const buf = Buffer.from(await res.arrayBuffer());
     const canvas = sharp({
@@ -91,26 +98,35 @@ export async function GET(req: Request) {
     const bg = await sharp(buf).resize(size.width, size.height, { fit: "cover" }).toBuffer();
 
     const overlayName = format === "story" ? "2.png" : "1.png";
-    const overlayUrl = new URL(`/${overlayName}`, u.origin).toString();
-    const overlayRes = await fetch(overlayUrl);
-    if (!overlayRes.ok) return NextResponse.json({ error: "Falha ao carregar máscara" }, { status: overlayRes.status });
-    const overlay = Buffer.from(await overlayRes.arrayBuffer());
+    let overlay: Buffer | undefined;
+    try {
+      const overlayUrl = new URL(`/${overlayName}`, u.origin).toString();
+      const overlayRes = await fetch(overlayUrl, { redirect: "follow" });
+      if (overlayRes.ok) {
+        overlay = Buffer.from(await overlayRes.arrayBuffer());
+      }
+    } catch { }
 
     const bottomHeight = Math.round(size.height * 0.3);
     const pad = Math.round(size.width * 0.05);
     const bottomTextSvg = buildBottomTextSVG(title, size.width, bottomHeight, pad);
 
-    const composites = [
+    const composites: { input: Buffer; left: number; top: number }[] = [
       { input: bg, left: 0, top: 0 },
-      { input: overlay, left: 0, top: 0 },
-      { input: bottomTextSvg, left: 0, top: size.height - bottomHeight },
     ];
+    if (overlay) composites.push({ input: overlay, left: 0, top: 0 });
+    composites.push({ input: bottomTextSvg, left: 0, top: size.height - bottomHeight });
     const out = await canvas
       .composite(composites)
       .withMetadata({ density: dpi })
       .png()
       .toBuffer();
-    return new NextResponse(new Uint8Array(out), { headers: { "Content-Type": "image/png" } });
+    return new NextResponse(new Uint8Array(out), {
+      headers: {
+        "Content-Type": "image/png",
+        "Cache-Control": "public, max-age=0, s-maxage=86400",
+      },
+    });
   } catch {
     return NextResponse.json({ error: "Erro ao gerar imagem" }, { status: 500 });
   }
