@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import SwRegister from "./sw-register";
+import PwaInstall from "./pwa-install";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -17,7 +18,11 @@ export const metadata: Metadata = {
   title: "Gerador de Posts",
   description: "Gere imagens de posts a partir de RSS",
   manifest: "/manifest.webmanifest",
-  themeColor: "#000000",
+  icons: {
+    icon: "/logo.png",
+    apple: "/logo.png",
+    shortcut: "/logo.png",
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
@@ -29,6 +34,7 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
+  themeColor: "#000000",
 };
 
 export default function RootLayout({
@@ -42,6 +48,7 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <SwRegister />
+        <PwaInstall />
         {children}
       </body>
     </html>

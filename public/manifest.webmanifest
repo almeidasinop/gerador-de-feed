@@ -10,16 +10,16 @@
   "categories": ["news", "photo", "tools"],
   "icons": [
     {
-      "src": "/1.png",
+      "src": "/api/icon?size=192",
       "type": "image/png",
-      "sizes": "1080x1350",
+      "sizes": "192x192",
       "purpose": "any"
     },
     {
-      "src": "/2.png",
+      "src": "/api/icon?size=512",
       "type": "image/png",
-      "sizes": "1080x1920",
-      "purpose": "any"
+      "sizes": "512x512",
+      "purpose": "any maskable"
     }
   ]
 }
