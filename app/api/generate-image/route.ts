@@ -96,7 +96,13 @@ export async function GET(req: Request) {
       .withMetadata({ density: dpi })
       .png()
       .toBuffer();
-    return new NextResponse(out, { headers: { "Content-Type": "image/png" } });
+    const stream = new ReadableStream({
+      start(controller) {
+        controller.enqueue(out);
+        controller.close();
+      },
+    });
+    return new NextResponse(stream, { headers: { "Content-Type": "image/png" } });
   } catch {
     return NextResponse.json({ error: "Erro ao gerar imagem" }, { status: 500 });
   }
