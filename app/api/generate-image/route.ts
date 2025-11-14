@@ -22,12 +22,25 @@ function wrapText(text: string, maxChars: number): string[] {
   return lines;
 }
 
+function normalizeText(text: string): string {
+  return text
+    .normalize("NFKC")
+    .replace(/[“”]/g, '"')
+    .replace(/[‘’]/g, "'")
+    .replace(/\u00A0/g, " ")
+    .replace(/\u200B/g, "");
+}
+
+function escapeXml(s: string): string {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
 function buildBottomTextSVG(title: string, width: number, height: number, padding: number): Buffer {
   const contentWidth = width - padding * 2;
   const contentHeight = height - padding * 2;
   let fontSize = Math.round(Math.min(contentHeight * 0.25, 56));
   const maxChars = Math.max(16, Math.round(contentWidth / (fontSize * 0.55)));
-  let lines = wrapText(title, maxChars);
+  let lines = wrapText(normalizeText(title), maxChars);
   lines = lines.slice(0, 6);
   const lineHeight = Math.round(fontSize * 1.25);
   const totalTextHeight = lineHeight * lines.length;
@@ -38,11 +51,11 @@ function buildBottomTextSVG(title: string, width: number, height: number, paddin
   const txtHeight = lh * lines.length;
   const startY = padding + Math.round((contentHeight - txtHeight) / 2) + fontSize;
   const tspans = lines
-    .map((line, i) => `<tspan x="${Math.round(width / 2)}" y="${startY + i * lh}">${line}</tspan>`)
+    .map((line, i) => `<tspan x="${Math.round(width / 2)}" y="${startY + i * lh}">${escapeXml(line)}</tspan>`)
     .join("");
   const svg = `
     <svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg">
-      <text fill="#0b9ef9" font-size="${fontSize}" font-weight="700" text-anchor="middle" font-family="Arial, Helvetica, Verdana, sans-serif">${tspans}</text>
+      <text fill="#0b9ef9" font-size="${fontSize}" font-weight="700" text-anchor="middle" font-family="system-ui, -apple-system, Segoe UI, Roboto, Arial, Helvetica, Verdana, sans-serif">${tspans}</text>
     </svg>
   `;
   return Buffer.from(svg);
