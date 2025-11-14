@@ -1,0 +1,25 @@
+{
+  "name": "Gerador de Posts",
+  "short_name": "Posts",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#000000",
+  "orientation": "portrait",
+  "categories": ["news", "photo", "tools"],
+  "icons": [
+    {
+      "src": "/1.png",
+      "type": "image/png",
+      "sizes": "1080x1350",
+      "purpose": "any"
+    },
+    {
+      "src": "/2.png",
+      "type": "image/png",
+      "sizes": "1080x1920",
+      "purpose": "any"
+    }
+  ]
+}
